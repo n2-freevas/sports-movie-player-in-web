@@ -22,7 +22,7 @@
 
 属性：`file-picker` `src` `double-tap-ms` `streak-ms` `zone-left` `zone-right` `skip-seconds` `swipe-step-px` `rates` `autohide-ms`（`fullscreen` は自動で付く）
 メソッド・プロパティ：`loadFile(file)` `play()` `pause()` `togglePlay()` `skip(-1|1)` `rate` `currentTime` `duration` `paused`
-イベント：`gvp-load` `gvp-skip` `gvp-ratechange` `gvp-playstate` `gvp-error`（`code` は `unsupported` / `decode` / `network` / `aborted` / `play` / `unknown`）
+イベント：`svp-load` `svp-skip` `svp-ratechange` `svp-playstate` `svp-error`（`code` は `unsupported` / `decode` / `network` / `aborted` / `play` / `unknown`）
 
 ## ソースの構成（Svelte 5）
 

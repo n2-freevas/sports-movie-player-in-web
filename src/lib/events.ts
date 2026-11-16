@@ -4,15 +4,15 @@ import type { Direction } from './playback-math';
 export type RateChangeSource = 'swipe' | 'menu' | 'api';
 export type PlayerErrorCode = 'unsupported' | 'decode' | 'network' | 'aborted' | 'play' | 'unknown';
 
-export interface GvpEventMap {
-  'gvp-load': { name: string; duration: number };
-  'gvp-skip': { direction: Direction; seconds: number; rate: number; total: number };
-  'gvp-ratechange': { rate: number; source: RateChangeSource };
-  'gvp-playstate': { paused: boolean };
-  'gvp-error': { code: PlayerErrorCode; message: string };
+export interface SvpEventMap {
+  'svp-load': { name: string; duration: number };
+  'svp-skip': { direction: Direction; seconds: number; rate: number; total: number };
+  'svp-ratechange': { rate: number; source: RateChangeSource };
+  'svp-playstate': { paused: boolean };
+  'svp-error': { code: PlayerErrorCode; message: string };
 }
 
-export type Emit = <K extends keyof GvpEventMap>(type: K, detail: GvpEventMap[K]) => void;
+export type Emit = <K extends keyof SvpEventMap>(type: K, detail: SvpEventMap[K]) => void;
 
 /** 要素からイベントを発生させる関数を作る */
 export function createEmitter(target: EventTarget): Emit {
@@ -47,10 +47,10 @@ export function mediaErrorCode(error: MediaError | null): PlayerErrorCode {
 
 declare global {
   interface HTMLElementEventMap {
-    'gvp-load': CustomEvent<GvpEventMap['gvp-load']>;
-    'gvp-skip': CustomEvent<GvpEventMap['gvp-skip']>;
-    'gvp-ratechange': CustomEvent<GvpEventMap['gvp-ratechange']>;
-    'gvp-playstate': CustomEvent<GvpEventMap['gvp-playstate']>;
-    'gvp-error': CustomEvent<GvpEventMap['gvp-error']>;
+    'svp-load': CustomEvent<SvpEventMap['svp-load']>;
+    'svp-skip': CustomEvent<SvpEventMap['svp-skip']>;
+    'svp-ratechange': CustomEvent<SvpEventMap['svp-ratechange']>;
+    'svp-playstate': CustomEvent<SvpEventMap['svp-playstate']>;
+    'svp-error': CustomEvent<SvpEventMap['svp-error']>;
   }
 }

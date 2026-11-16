@@ -212,7 +212,7 @@
   export function skip(direction: -1 | 1): number {
     const moved = player.skipBy(direction, settings.skipSeconds);
     if (moved == null) return 0;
-    emit('gvp-skip', { direction, seconds: moved, rate: player.rate, total: moved });
+    emit('svp-skip', { direction, seconds: moved, rate: player.rate, total: moved });
     return moved;
   }
 
@@ -246,7 +246,7 @@
     panel.show();
     const p = load();
     p.catch(() => {
-      /* gvp-error と画面表示で知らせる */
+      /* svp-error と画面表示で知らせる */
     });
     return p;
   }
@@ -269,7 +269,7 @@
     if (moved == null) return; // 動画の情報を読み込む前のスキップは無視
     streakTotal += moved;
     showSkip(direction, streakTotal, at);
-    emit('gvp-skip', { direction, seconds: moved, rate: player.rate, total: streakTotal });
+    emit('svp-skip', { direction, seconds: moved, rate: player.rate, total: streakTotal });
   }
 
   function onSwipeMove(deltaY: number) {
@@ -432,9 +432,9 @@
     contain: layout paint;
     font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Segoe UI', Roboto, sans-serif;
     -webkit-text-size-adjust: 100%;
-    --gvp-accent: #ff3b30;
-    --gvp-fade: 0.2s;
-    --gvp-bar-height: 56px;
+    --svp-accent: #ff3b30;
+    --svp-fade: 0.2s;
+    --svp-bar-height: 56px;
   }
 
   :host([hidden]) {
@@ -517,7 +517,7 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     opacity: 0;
-    transition: opacity var(--gvp-fade) ease;
+    transition: opacity var(--svp-fade) ease;
   }
 
   .rate-badge.show {

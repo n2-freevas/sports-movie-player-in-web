@@ -41,9 +41,9 @@
     if (e.target === e.currentTarget) onclose();
   }}
 >
-  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="gvp-help-title" {@attach dialog}>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="svp-help-title" {@attach dialog}>
     <div class="header">
-      <h2 id="gvp-help-title">操作方法</h2>
+      <h2 id="svp-help-title">操作方法</h2>
       <button class="close" type="button" aria-label="閉じる" onclick={onclose}><Icon name="close" /></button>
     </div>
 

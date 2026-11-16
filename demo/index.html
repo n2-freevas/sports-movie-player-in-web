@@ -74,7 +74,7 @@
         const t = new Date().toLocaleTimeString();
         log.textContent = `${t} ${type} ${JSON.stringify(detail)}\n` + log.textContent;
       };
-      for (const type of ['gvp-load', 'gvp-skip', 'gvp-ratechange', 'gvp-playstate', 'gvp-error']) {
+      for (const type of ['svp-load', 'svp-skip', 'svp-ratechange', 'svp-playstate', 'svp-error']) {
         player.addEventListener(type, (e) => write(type, e.detail));
       }
       // 動作確認用：?src=/testdata/xxx.MOV で開発サーバー上の動画を読み込む

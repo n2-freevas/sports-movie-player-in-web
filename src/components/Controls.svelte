@@ -148,7 +148,7 @@
     inset: 0;
     pointer-events: none;
     opacity: 0;
-    transition: opacity var(--gvp-fade) ease;
+    transition: opacity var(--svp-fade) ease;
   }
   .visible {
     opacity: 1;
@@ -224,7 +224,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: calc(var(--gvp-bar-height) + env(safe-area-inset-bottom, 0px));
+    height: calc(var(--svp-bar-height) + env(safe-area-inset-bottom, 0px));
     padding: 0 calc(6px + env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px)
       calc(6px + env(safe-area-inset-left, 0px));
     display: flex;

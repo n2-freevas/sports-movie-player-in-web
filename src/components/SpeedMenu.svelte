@@ -51,8 +51,8 @@
   .menu {
     position: absolute;
     right: calc(10px + env(safe-area-inset-right, 0px));
-    bottom: calc(var(--gvp-bar-height) + 4px + env(safe-area-inset-bottom, 0px));
-    max-height: calc(100% - var(--gvp-bar-height) - 16px);
+    bottom: calc(var(--svp-bar-height) + 4px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100% - var(--svp-bar-height) - 16px);
     min-width: 140px;
     padding: 6px 0;
     overflow-y: auto;

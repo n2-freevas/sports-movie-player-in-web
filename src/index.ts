@@ -6,5 +6,5 @@
 import SportsVideoPlayer from './SportsVideoPlayer.svelte';
 
 export { SportsVideoPlayer };
-export type { GvpEventMap, PlayerErrorCode, RateChangeSource } from './lib/events';
+export type { SvpEventMap, PlayerErrorCode, RateChangeSource } from './lib/events';
 export { DEFAULT_RATES } from './lib/playback-math';

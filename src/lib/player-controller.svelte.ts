@@ -112,7 +112,7 @@ export class PlayerController {
     this.#applyRate('api', false);
     this.#pending?.resolve();
     this.#pending = null;
-    this.emit('gvp-load', { name: this.name, duration: this.duration });
+    this.emit('svp-load', { name: this.name, duration: this.duration });
   }
 
   onDurationChange(): void {
@@ -138,7 +138,7 @@ export class PlayerController {
     const paused = this.video?.paused ?? true;
     this.paused = paused;
     if (!paused) this.error = null;
-    this.emit('gvp-playstate', { paused });
+    this.emit('svp-playstate', { paused });
   }
 
   onError(): void {
@@ -151,7 +151,7 @@ export class PlayerController {
 
   reportError(code: PlayerErrorCode): void {
     this.error = code;
-    this.emit('gvp-error', { code, message: ERROR_MESSAGES[code] });
+    this.emit('svp-error', { code, message: ERROR_MESSAGES[code] });
   }
 
   // ───────────── 再生 ─────────────
@@ -223,7 +223,7 @@ export class PlayerController {
       this.minRateIndex = this.rateIndex + 1;
       this.rateIndex = this.minRateIndex;
     }
-    if (changed || before !== this.rateIndex) this.emit('gvp-ratechange', { rate: this.rate, source });
+    if (changed || before !== this.rateIndex) this.emit('svp-ratechange', { rate: this.rate, source });
   }
 
   #trySetRate(rate: number): boolean {

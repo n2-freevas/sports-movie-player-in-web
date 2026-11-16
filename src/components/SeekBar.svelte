@@ -135,7 +135,7 @@
     background: rgba(255, 255, 255, 0.45);
   }
   .progress {
-    background: var(--gvp-accent);
+    background: var(--svp-accent);
   }
   .thumb {
     position: absolute;
@@ -144,7 +144,7 @@
     height: 13px;
     margin: -6.5px 0 0 -6.5px;
     border-radius: 50%;
-    background: var(--gvp-accent);
+    background: var(--svp-accent);
     transform: scale(0.85);
     transition: transform 0.1s ease;
   }

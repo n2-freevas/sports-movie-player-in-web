@@ -19,7 +19,6 @@
 
   const percent = (ratio: number) => `${Math.round(ratio * 100)}%`;
   const sec = $derived(formatSeconds(skipSeconds));
-  const slowExample = $derived(formatSeconds(skipSeconds * 0.5));
 
   // 開いたら閉じるボタンにフォーカスし、Esc で閉じる
   function dialog(node: HTMLElement) {
@@ -68,15 +67,15 @@
 
     <dl class="list">
       <dt>左・右を2回タップ</dt>
-      <dd>{sec}秒戻る・進む。続けてタップすると、さらに{sec}秒ずつ動く</dd>
+      <dd>{sec}秒戻る・進む。</dd>
       <dt>中央をタップ</dt>
       <dd>再生・停止</dd>
       <dt>左・右をタップ</dt>
       <dd>操作パネルの表示・非表示</dd>
       <dt>上下にスワイプ</dt>
-      <dd>再生速度を変える（上で速く、下で遅く）</dd>
+      <dd>再生速度を変える</dd>
     </dl>
-    <p class="note">等倍より遅いときは、スキップする秒数も短くなります（0.5倍なら{slowExample}秒）。</p>
+    <p class="note">等倍より遅いときは、スキップする秒数も短くなります。</p>
   </div>
 </div>
 

@@ -1,0 +1,68 @@
+# バージョンタグ（v0.2.0 など）を push すると、検査・ビルドしてから GitHub のリリースを作る。
+# 手順は README の「リリース」を参照。
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # main の履歴と比べるため、全履歴を取得する
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: タグとバージョンを確認
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "${tag}" != "v${version}" ]; then
+            echo "::error::タグ ${tag} と package.json の version（${version}）が一致しません"
+            exit 1
+          fi
+          # main にマージ済みのコミットからだけリリースする
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::タグ ${tag} のコミットが main にありません。PR をマージしてから、main のコミットにタグを付けてください"
+            exit 1
+          fi
+
+      - name: 依存関係のインストール
+        run: npm ci
+
+      - name: テスト
+        run: npm test
+
+      - name: ビルド（型チェックを含む）
+        run: npm run build
+
+      - name: リリースを作成
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          # v1.0.0-beta.1 のようにハイフンを含むタグはプレリリースにする
+          prerelease=""
+          case "${tag}" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "${tag}" \
+            dist/sports-video-player.js \
+            dist/sports-video-player.iife.js \
+            --title "${tag}" \
+            --generate-notes \
+            --verify-tag \
+            ${prerelease}

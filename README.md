@@ -116,3 +116,19 @@ npm run typecheck  # svelte-check
 npm run build    # dist/sports-video-player.js（ESM）と dist/sports-video-player.iife.js
 ```
 
+
+## リリース
+
+バージョンタグを push すると、GitHub Actions（[.github/workflows/release.yml](.github/workflows/release.yml)）がテスト・ビルドを行い、ビルド済みの `sports-video-player.js` と `sports-video-player.iife.js` を添付した GitHub のリリースを作る。リリースノートは、前回のリリース以降にマージされた PR のタイトルから自動で作られる。
+
+1. `package.json` の `version` を上げる PR を作り、`main` にマージする
+2. マージ後の `main` で、同じバージョンのタグを付けて push する
+
+```bash
+git switch main && git pull
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+- タグと `package.json` の `version` が一致しない場合、またはタグのコミットが `main` にない場合は、リリースを作らずに失敗する
+- `v1.0.0-beta.1` のようにハイフンを含むタグはプレリリースになる

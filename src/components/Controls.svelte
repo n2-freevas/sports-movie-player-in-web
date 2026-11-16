@@ -49,9 +49,12 @@
     if (!visible) menuOpen = false;
   });
 
-  // 下部バーではブラウザのスクロール・拡大を起こさない（passive: false が必要）
+  // 下部バーではブラウザのスクロール・拡大を起こさない（passive: false が必要）。
+  // ただしボタン上のタッチは止めない。touchstart を止めると click が発生せず、ボタンが押せなくなる
   function noTouchScroll(node: HTMLElement) {
-    const prevent = (e: TouchEvent) => e.preventDefault();
+    const prevent = (e: TouchEvent) => {
+      if (!(e.target as Element | null)?.closest?.('button')) e.preventDefault();
+    };
     node.addEventListener('touchstart', prevent, { passive: false });
     return () => node.removeEventListener('touchstart', prevent);
   }

@@ -18,6 +18,8 @@
 | 左右タップ | 操作パネルの表示切り替え |
 | 縦スワイプ | 上で速く、下で遅く（0.1〜2倍）。等倍未満はスキップ秒数も「10秒×速度」 |
 
+操作方法は、下部バーの「？」ボタンからプレーヤー内でも確認できる（開くと動画は停止する）。
+
 属性：`file-picker` `src` `double-tap-ms` `streak-ms` `zone-left` `zone-right` `skip-seconds` `swipe-step-px` `rates` `autohide-ms`（`fullscreen` は自動で付く）
 メソッド・プロパティ：`loadFile(file)` `play()` `pause()` `togglePlay()` `skip(-1|1)` `rate` `currentTime` `duration` `paused`
 イベント：`gvp-load` `gvp-skip` `gvp-ratechange` `gvp-playstate` `gvp-error`（`code` は `unsupported` / `decode` / `network` / `aborted` / `play` / `unknown`）
@@ -33,6 +35,7 @@ src/
     Controls.svelte            操作パネル（上部バー・再生ボタン・下部バー）
     SeekBar.svelte / SpeedMenu.svelte / EmptyState.svelte
     SkipRipple.svelte / RateOverlay.svelte   反応表示
+    HelpOverlay.svelte         操作方法（下部バーの「？」で開く）
     Icon.svelte / icons.ts     SVGアイコン
   lib/                         画面に依存しないロジック
     playback-math.ts           スキップ秒数・速度段階の計算（純粋関数）

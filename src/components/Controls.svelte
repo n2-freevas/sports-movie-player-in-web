@@ -2,7 +2,7 @@
   4. 操作パネル層（YouTube風UI）
   - 上部バー：ファイル名、ファイル選択ボタン
   - 中央：再生／停止ボタン（左右にスキップボタンは置かない）
-  - 下部バー：シークバー、経過時間／総時間、速度、全画面ボタン
+  - 下部バー：シークバー、経過時間／総時間、操作方法、速度、全画面ボタン
   表示中はボタンと下部バーだけがタップを受け、それ以外はジェスチャー層へ通す。
 -->
 <script lang="ts">
@@ -22,6 +22,8 @@
     onpickfile(): void;
     onselectrate(index: number): void;
     ontogglefullscreen(): void;
+    /** 操作方法を開く */
+    onhelp(): void;
     /** パネル上で何か操作した（自動で隠すタイマーをやり直す） */
     onactivity(): void;
   }
@@ -36,6 +38,7 @@
     onpickfile,
     onselectrate,
     ontogglefullscreen,
+    onhelp,
     onactivity,
   }: Props = $props();
 
@@ -100,6 +103,9 @@
         {formatTime(player.currentTime)}<span class="sep">/</span>{formatTime(player.duration)}
       </div>
       <div class="spacer"></div>
+      <button class="icon-btn" type="button" aria-label="操作方法" title="操作方法" onclick={onhelp}>
+        <Icon name="help" />
+      </button>
       <button
         class="speed-btn"
         class:changed={player.rate !== 1}

@@ -3,7 +3,7 @@
     1. 動画層       <video playsinline>（OS標準の操作パネルは使わない）
     2. ジェスチャー層 GestureLayer
     3. 反応表示層   SkipRipple / RateOverlay / 右下の倍率 / メッセージ
-    4. 操作パネル層 Controls（と、動画未選択時の EmptyState）
+    4. 操作パネル層 Controls（と、動画未選択時の EmptyState、操作方法の HelpOverlay）
   動画の状態と操作は PlayerController、パネルの表示は AutoHide、全画面は FullscreenController に任せる。
 -->
 <svelte:options
@@ -35,6 +35,7 @@
   import Controls from './components/Controls.svelte';
   import EmptyState from './components/EmptyState.svelte';
   import GestureLayer from './components/GestureLayer.svelte';
+  import HelpOverlay from './components/HelpOverlay.svelte';
   import RateOverlay from './components/RateOverlay.svelte';
   import SkipRipple from './components/SkipRipple.svelte';
   import { AutoHide } from './lib/autohide.svelte';
@@ -115,6 +116,7 @@
   const fullscreen = new FullscreenController(hostEl);
 
   let menuOpen = $state(false);
+  let helpOpen = $state(false);
   let seeking = $state(false);
   const panel = new AutoHide(
     () => settings.autohideMs,
@@ -303,6 +305,13 @@
     if (hideAfterMs != null) rateTimer = setTimeout(() => (rateOverlayVisible = false), hideAfterMs);
   }
 
+  /** 操作方法を開く。読んでいる間に試合が進まないよう、先に動画を停止する */
+  function openHelp() {
+    player.pause();
+    menuOpen = false;
+    helpOpen = true;
+  }
+
   function flashRate() {
     showRate(RATE_FLASH_MS);
   }
@@ -385,11 +394,21 @@
       flashRate();
     }}
     ontogglefullscreen={() => fullscreen.toggle()}
+    onhelp={openHelp}
     onactivity={() => panel.restart()}
   />
 
   {#if player.source == null}
     <EmptyState {filePicker} onpickfile={() => fileInput.click()} />
+  {/if}
+
+  {#if helpOpen}
+    <HelpOverlay
+      zoneLeft={settings.zoneLeft}
+      zoneRight={settings.zoneRight}
+      skipSeconds={settings.skipSeconds}
+      onclose={() => (helpOpen = false)}
+    />
   {/if}
 
   <input

@@ -44,21 +44,6 @@
         line-height: 1.7;
         color: #bbb;
       }
-      table {
-        border-collapse: collapse;
-        width: 100%;
-      }
-      th,
-      td {
-        text-align: left;
-        padding: 4px 8px 4px 0;
-        border-bottom: 1px solid #2a2a2a;
-        vertical-align: top;
-      }
-      th {
-        color: #eee;
-        white-space: nowrap;
-      }
       #log {
         margin: 0;
         padding: 10px;
@@ -76,16 +61,6 @@
     <main>
       <h1>Sports Video Player</h1>
       <sports-video-player id="player" file-picker></sports-video-player>
-
-      <section>
-        <table>
-          <tr><th>左（〜37%）</th><td>ダブルタップで巻き戻し／続けてタップで追加</td></tr>
-          <tr><th>右（63%〜）</th><td>ダブルタップで送り／続けてタップで追加</td></tr>
-          <tr><th>中央</th><td>タップで再生・停止</td></tr>
-          <tr><th>左右</th><td>タップで操作パネルの表示切り替え</td></tr>
-          <tr><th>縦スワイプ</th><td>上で速く、下で遅く（0.1〜2倍）。等倍より遅いとスキップ秒数も短くなる</td></tr>
-        </table>
-      </section>
 
       <section>
         <pre id="log" aria-label="イベントログ"></pre>

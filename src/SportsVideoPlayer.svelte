@@ -137,6 +137,8 @@
   let streakTotal = 0;
   /** キーでの連続スキップ。同じ向きをスキップ表示中に押したら合計秒数を出す */
   let keySkip = { direction: 0, total: 0, at: -Infinity };
+  /** 最後にクリック・タップで押したボタン（Tab キーで移動したら null） */
+  let pointerButton: Element | null = null;
 
   let rateOverlayVisible = $state(false);
   let rateTimer: ReturnType<typeof setTimeout> | undefined;
@@ -155,14 +157,23 @@
   $effect(() => {
     if (!hostEl.hasAttribute('tabindex')) hostEl.tabIndex = 0;
     // 動画上のタップは既定の動作を止めていてフォーカスが移らないため、自分でフォーカスする
-    const focusSelf = () => {
+    const onPointerdown = (e: PointerEvent) => {
       if (document.activeElement !== hostEl) hostEl.focus({ preventScroll: true });
+      const target = e.composedPath()[0];
+      pointerButton = target instanceof Element ? target.closest('button') : null;
+    };
+    // フォーカスがプレーヤーの外に出たら忘れる（Tab で戻ってきたボタンを Space で押せるように）。
+    // 中での移動では relatedTarget が自分自身になる
+    const onFocusout = (e: FocusEvent) => {
+      if (e.relatedTarget !== hostEl) pointerButton = null;
     };
     hostEl.addEventListener('keydown', onKeydown);
-    hostEl.addEventListener('pointerdown', focusSelf);
+    hostEl.addEventListener('pointerdown', onPointerdown);
+    hostEl.addEventListener('focusout', onFocusout);
     return () => {
       hostEl.removeEventListener('keydown', onKeydown);
-      hostEl.removeEventListener('pointerdown', focusSelf);
+      hostEl.removeEventListener('pointerdown', onPointerdown);
+      hostEl.removeEventListener('focusout', onFocusout);
     };
   });
 
@@ -317,9 +328,14 @@
 
   function onKeydown(e: KeyboardEvent) {
     if (e.defaultPrevented) return;
-    // フォーカスしたボタンは、Space・Enter で押せるようにしておく
+    // Tab キーでボタンに移ったときは、Space・Enter でそのボタンを押せるようにしておく。
+    // クリック・タップで押したボタンにはフォーカスが残るが、その後の Space は再生・停止にする
+    // （全画面ボタンを押した直後の Space で全画面が解除されないように。YouTube と同じ）
+    if (e.key === 'Tab') pointerButton = null;
     const target = e.composedPath()[0];
-    if ((e.key === ' ' || e.key === 'Enter') && target instanceof Element && target.closest('button')) return;
+    const button = target instanceof Element ? target.closest('button') : null;
+    if (button && e.key === 'Enter') return;
+    if (button && e.key === ' ' && button !== pointerButton) return;
 
     const action = keyAction(e);
     if (!action) return;

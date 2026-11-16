@@ -1,6 +1,6 @@
 <!--
-  操作方法のオーバーレイ。下部バーの「？」ボタンで開く（開くときに動画は停止する）。
-  領域の幅やスキップ秒数は属性の設定値をそのまま表示する。
+  操作方法のオーバーレイ。下部バーの「？」ボタンか「?」キーで開く（開くときに動画は停止する）。
+  タッチ操作とキーボードショートカットを載せる。領域の幅やスキップ秒数は属性の設定値をそのまま表示する。
 -->
 <script lang="ts">
   import { formatSeconds } from '../lib/playback-math';
@@ -10,15 +10,18 @@
     /** 左領域の右端・右領域の左端（0〜1） */
     zoneLeft: number;
     zoneRight: number;
-    /** 基準スキップ秒数 */
+    /** 基準スキップ秒数（2回タップ、J・L キー） */
     skipSeconds: number;
+    /** ←・→ キーのスキップ秒数 */
+    arrowSkipSeconds: number;
     onclose(): void;
   }
 
-  let { zoneLeft, zoneRight, skipSeconds, onclose }: Props = $props();
+  let { zoneLeft, zoneRight, skipSeconds, arrowSkipSeconds, onclose }: Props = $props();
 
   const percent = (ratio: number) => `${Math.round(ratio * 100)}%`;
   const sec = $derived(formatSeconds(skipSeconds));
+  const arrowSec = $derived(formatSeconds(arrowSkipSeconds));
 
   // 開いたら閉じるボタンにフォーカスし、Esc で閉じる
   function dialog(node: HTMLElement) {
@@ -65,6 +68,7 @@
       </div>
     </div>
 
+    <h3>タッチ</h3>
     <dl class="list">
       <dt>左・右を2回タップ</dt>
       <dd>{sec}秒戻る・進む。</dd>
@@ -75,7 +79,27 @@
       <dt>上下にスワイプ</dt>
       <dd>再生速度を変える</dd>
     </dl>
-    <p class="note">等倍より遅いときは、スキップする秒数も短くなります。</p>
+
+    <h3>キーボード</h3>
+    <dl class="list keys">
+      <dt><kbd>Space</kbd> <kbd>K</kbd></dt>
+      <dd>再生・停止</dd>
+      <dt><kbd>J</kbd> <kbd>L</kbd></dt>
+      <dd>{sec}秒戻る・進む</dd>
+      <dt><kbd>←</kbd> <kbd>→</kbd></dt>
+      <dd>{arrowSec}秒戻る・進む</dd>
+      <dt><kbd>,</kbd> <kbd>.</kbd></dt>
+      <dd>1コマ戻る・進む（停止中）</dd>
+      <dt><kbd>&lt;</kbd> <kbd>&gt;</kbd></dt>
+      <dd>再生速度を下げる・上げる（Shift + <kbd>,</kbd> <kbd>.</kbd>）</dd>
+      <dt><kbd>Home</kbd> <kbd>End</kbd></dt>
+      <dd>先頭・末尾へ</dd>
+      <dt><kbd>0</kbd>〜<kbd>9</kbd></dt>
+      <dd>動画の 0%〜90% の位置へ</dd>
+      <dt><kbd>?</kbd></dt>
+      <dd>この画面を開く・閉じる</dd>
+    </dl>
+    <p class="note">等倍より遅いときは、スキップする秒数も短くなります（タップ・キーとも）。キー操作は、プレーヤーをクリックかタップして選択した状態で使えます。</p>
   </div>
 </div>
 
@@ -172,6 +196,13 @@
     font-variant-numeric: tabular-nums;
   }
 
+  h3 {
+    margin: 12px 0 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
   .list {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -186,6 +217,20 @@
     margin: 0;
     color: rgba(255, 255, 255, 0.85);
   }
+  kbd {
+    display: inline-block;
+    min-width: 1.7em;
+    padding: 0 5px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    font: 600 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-align: center;
+  }
+  dd kbd {
+    font-size: 11px;
+  }
+
   .note {
     margin: 10px 0 0;
     font-size: 12px;

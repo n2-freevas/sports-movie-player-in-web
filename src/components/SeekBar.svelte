@@ -51,18 +51,7 @@
     seeking = false;
   }
 
-  function onkeydown(e: KeyboardEvent) {
-    if (duration <= 0) return;
-    const next =
-      e.key === 'ArrowLeft' ? currentTime - 5
-      : e.key === 'ArrowRight' ? currentTime + 5
-      : e.key === 'Home' ? 0
-      : e.key === 'End' ? duration
-      : null;
-    if (next == null) return;
-    e.preventDefault();
-    onseek(clamp(next, 0, duration));
-  }
+  // ←・→・Home・End などのキー操作は、プレーヤー全体のキーボードショートカットで受ける
 </script>
 
 <div
@@ -81,7 +70,6 @@
   onpointerup={end}
   onpointercancel={end}
   onlostpointercapture={end}
-  {onkeydown}
 >
   <div class="track">
     <div class="buffer" style:transform="scaleX({bufferRatio})"></div>

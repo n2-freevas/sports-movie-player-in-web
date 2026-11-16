@@ -1,7 +1,7 @@
 /** 公開イベント（設計書 3.5）。CustomEvent として親要素へ伝わり、Shadow DOM の外でも受け取れる */
 import type { Direction } from './playback-math';
 
-export type RateChangeSource = 'swipe' | 'menu' | 'api';
+export type RateChangeSource = 'swipe' | 'menu' | 'keyboard' | 'api';
 export type PlayerErrorCode = 'unsupported' | 'decode' | 'network' | 'aborted' | 'play' | 'unknown';
 
 export interface SvpEventMap {

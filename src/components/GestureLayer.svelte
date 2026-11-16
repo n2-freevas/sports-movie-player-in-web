@@ -124,7 +124,7 @@
   });
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions (タッチ操作専用の層。キーボード操作は操作パネルのボタンで行う) -->
+<!-- svelte-ignore a11y_no_static_element_interactions (タッチ操作専用の層。キーボード操作はプレーヤー全体のショートカットと操作パネルのボタンで行う) -->
 <div
   class="gesture"
   part="gesture"

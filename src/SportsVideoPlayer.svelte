@@ -42,6 +42,7 @@
   import type { PlayerSnapshot } from './lib/element-api';
   import { createEmitter } from './lib/events';
   import { FullscreenController } from './lib/fullscreen.svelte';
+  import { ARROW_SKIP_SCALE, FRAME_SECONDS, keyAction } from './lib/keyboard';
   import {
     DEFAULT_RATES,
     formatRate,
@@ -134,6 +135,8 @@
   });
   const skipTimers: Record<'left' | 'right', ReturnType<typeof setTimeout> | undefined> = { left: undefined, right: undefined };
   let streakTotal = 0;
+  /** キーでの連続スキップ。同じ向きをスキップ表示中に押したら合計秒数を出す */
+  let keySkip = { direction: 0, total: 0, at: -Infinity };
 
   let rateOverlayVisible = $state(false);
   let rateTimer: ReturnType<typeof setTimeout> | undefined;
@@ -146,6 +149,33 @@
   // 全画面中は fullscreen 属性を付ける（スタイル調整用）
   $effect(() => {
     hostEl.toggleAttribute('fullscreen', fullscreen.active);
+  });
+
+  // キーボードショートカット。プレーヤーにフォーカスがあるときだけ効く（ページの他の操作を奪わない）
+  $effect(() => {
+    if (!hostEl.hasAttribute('tabindex')) hostEl.tabIndex = 0;
+    // 動画上のタップは既定の動作を止めていてフォーカスが移らないため、自分でフォーカスする
+    const focusSelf = () => {
+      if (document.activeElement !== hostEl) hostEl.focus({ preventScroll: true });
+    };
+    hostEl.addEventListener('keydown', onKeydown);
+    hostEl.addEventListener('pointerdown', focusSelf);
+    return () => {
+      hostEl.removeEventListener('keydown', onKeydown);
+      hostEl.removeEventListener('pointerdown', focusSelf);
+    };
+  });
+
+  // 速度一覧や操作方法を閉じると、中のボタンにあったフォーカスが消えてショートカットが効かなくなる。
+  // その場合はプレーヤーにフォーカスを戻す
+  let wasOverlayOpen = false;
+  $effect(() => {
+    const open = menuOpen || helpOpen;
+    untrack(() => {
+      const lost = document.activeElement == null || document.activeElement === document.body;
+      if (wasOverlayOpen && !open && lost) hostEl.focus({ preventScroll: true });
+      wasOverlayOpen = open;
+    });
   });
 
   // rates 属性
@@ -283,9 +313,64 @@
     if (i !== player.rateIndex) player.setRateIndex(i, 'swipe');
   }
 
+  // ── キーボード ──
+
+  function onKeydown(e: KeyboardEvent) {
+    if (e.defaultPrevented) return;
+    // フォーカスしたボタンは、Space・Enter で押せるようにしておく
+    const target = e.composedPath()[0];
+    if ((e.key === ' ' || e.key === 'Enter') && target instanceof Element && target.closest('button')) return;
+
+    const action = keyAction(e);
+    if (!action) return;
+    // 操作方法を開いている間は、閉じる「?」以外は効かせない（閉じるのは Esc と「?」）
+    if (helpOpen && action.type !== 'help') return;
+    e.preventDefault();
+    // 押しっぱなしで再生・停止や操作方法の開閉を繰り返さない
+    if (e.repeat && (action.type === 'togglePlay' || action.type === 'help')) return;
+
+    switch (action.type) {
+      case 'togglePlay':
+        if (player.source != null) player.togglePlay();
+        break;
+      case 'skip':
+        onKeySkip(action.direction, action.scale);
+        break;
+      case 'seekRatio':
+        if (!player.hasMetadata) break;
+        player.seek(player.duration * action.ratio);
+        panel.show();
+        break;
+      case 'frame':
+        // YouTube と同じく停止中だけ
+        if (!player.hasMetadata || !player.paused || !player.video) break;
+        player.seek(player.video.currentTime + action.direction * FRAME_SECONDS);
+        break;
+      case 'rate':
+        player.setRateIndex(player.rateIndex + action.step, 'keyboard');
+        flashRate();
+        break;
+      case 'help':
+        if (helpOpen) helpOpen = false;
+        else openHelp();
+        break;
+    }
+  }
+
+  function onKeySkip(direction: Direction, scale: number) {
+    const moved = player.skipBy(direction, settings.skipSeconds * scale);
+    if (moved == null) return;
+    const now = performance.now();
+    const continued = keySkip.direction === direction && now - keySkip.at < SKIP_VISIBLE_MS;
+    keySkip = { direction, total: (continued ? keySkip.total : 0) + moved, at: now };
+    showSkip(direction, keySkip.total, null);
+    emit('svp-skip', { direction, seconds: moved, rate: player.rate, total: keySkip.total });
+  }
+
   // ── 反応表示 ──
 
-  function showSkip(direction: Direction, total: number, at: { x: number; y: number }) {
+  /** at を省略（null）すると、波紋はその側の中央に出す */
+  function showSkip(direction: Direction, total: number, at: { x: number; y: number } | null) {
     const side = direction < 0 ? 'left' : 'right';
     const other = direction < 0 ? 'right' : 'left';
     skipView[other].visible = false;
@@ -407,6 +492,7 @@
       zoneLeft={settings.zoneLeft}
       zoneRight={settings.zoneRight}
       skipSeconds={settings.skipSeconds}
+      arrowSkipSeconds={settings.skipSeconds * ARROW_SKIP_SCALE}
       onclose={() => (helpOpen = false)}
     />
   {/if}
@@ -439,6 +525,15 @@
 
   :host([hidden]) {
     display: none;
+  }
+
+  /* タップでフォーカスしたときは枠を出さず、Tab キーで移ったときだけ出す */
+  :host(:focus) {
+    outline: none;
+  }
+  :host(:focus-visible) {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
   }
 
   /* 疑似全画面（iPhone）／ネイティブ全画面 */

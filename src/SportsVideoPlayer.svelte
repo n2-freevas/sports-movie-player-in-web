@@ -2,7 +2,7 @@
   <sports-video-player> 本体。4つの層を下から重ねる（設計書 2.1）。
     1. 動画層       <video playsinline>（OS標準の操作パネルは使わない）
     2. ジェスチャー層 GestureLayer
-    3. 反応表示層   SkipRipple / RateOverlay / 右上の倍率 / メッセージ
+    3. 反応表示層   SkipRipple / RateOverlay / 右下の倍率 / メッセージ
     4. 操作パネル層 Controls（と、動画未選択時の EmptyState）
   動画の状態と操作は PlayerController、パネルの表示は AutoHide、全画面は FullscreenController に任せる。
 -->
@@ -360,7 +360,7 @@
       index={player.rateIndex}
       minIndex={player.minRateIndex}
     />
-    <!-- 速度が1倍以外のとき、操作パネルを隠していても右上に倍率を出し続ける -->
+    <!-- 速度が1倍以外のとき、操作パネルを隠していても右下に倍率を出し続ける -->
     <div class="rate-badge" class:show={!panel.visible && player.rate !== 1} part="rate-badge">
       {formatRate(player.rate)}
     </div>
@@ -487,7 +487,7 @@
 
   .rate-badge {
     position: absolute;
-    top: calc(10px + env(safe-area-inset-top, 0px));
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     right: calc(10px + env(safe-area-inset-right, 0px));
     padding: 3px 8px;
     border-radius: 999px;

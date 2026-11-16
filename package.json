@@ -1,6 +1,6 @@
 {
   "name": "sports-video-player",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ジェスチャー操作型 動画プレーヤー（Webコンポーネント <sports-video-player>）",
   "type": "module",
   "main": "./dist/sports-video-player.iife.js",

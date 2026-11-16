@@ -3,50 +3,108 @@
 タップとスワイプだけで「N秒スキップ」と「速度変更」ができる動画プレーヤー（Webコンポーネント）。
 仕様は [docs/](docs/) の要件定義・設計書を参照。
 
-## 使い方
+## インテグレート方法
+
+Webコンポーネントとして提供しているため、ビルド済みのjsを HTMLでインポートし、任意の箇所で `<sports-video-player>` を記述すると、クライアントサイドレンダリングのタイミングで動画プレイヤーが呼び出される。
 
 ```html
 <script type="module" src="sports-video-player.js"></script>
 <sports-video-player file-picker></sports-video-player>
 ```
 
+## 操作方法
+
 | 操作 | 動作 |
 | --- | --- |
-| 左（〜37%）ダブルタップ | 巻き戻し（続けてタップで追加） |
-| 右（63%〜）ダブルタップ | 送り（続けてタップで追加） |
+| 左 ダブルタップ | 巻き戻し（続けてタップで追加） |
+| 右 ダブルタップ | 送り（続けてタップで追加） |
 | 中央タップ | 再生・停止 |
 | 左右タップ | 操作パネルの表示切り替え |
 | 縦スワイプ | 上で速く、下で遅く（0.1〜2倍）。等倍未満はスキップ秒数も「10秒×速度」 |
 
-操作方法は、下部バーの「？」ボタンからプレーヤー内でも確認できる（開くと動画は停止する）。
 
-属性：`file-picker` `src` `double-tap-ms` `streak-ms` `zone-left` `zone-right` `skip-seconds` `swipe-step-px` `rates` `autohide-ms`（`fullscreen` は自動で付く）
-メソッド・プロパティ：`loadFile(file)` `play()` `pause()` `togglePlay()` `skip(-1|1)` `rate` `currentTime` `duration` `paused`
-イベント：`svp-load` `svp-skip` `svp-ratechange` `svp-playstate` `svp-error`（`code` は `unsupported` / `decode` / `network` / `aborted` / `play` / `unknown`）
+## プロパティ・カスタムイベント
 
-## ソースの構成（Svelte 5）
+### 属性
 
+数値の属性に不正な値（数値でない、下限未満）を指定した場合は既定値を使う。属性は後から変更しても即座に反映される。
+
+| 属性 | 型 | 既定値 | 説明 |
+| --- | --- | --- | --- |
+| `file-picker` | 真偽値 | なし | 上部バーと、動画未選択時の画面中央に「動画ファイルを選択」ボタンを出す |
+| `src` | 文字列 | なし | 動画のURL。設定・変更するとその動画を読み込む（ネット上の動画の再生は動作保証外） |
+| `double-tap-ms` | 数値（ms、1以上） | `200` | ダブルタップとみなす猶予。1回目を離してから2回目の指を置くまでの時間 |
+| `streak-ms` | 数値（ms、1以上） | `500` | ダブルタップ後、続けてタップして追加でスキップできる猶予 |
+| `zone-left` | 割合 | `37%` | 左領域（巻き戻し）の右端。`37`・`37%`・`0.37` のいずれの書き方でもよい |
+| `zone-right` | 割合 | `63%` | 右領域（送り）の左端。`zone-left` より小さい場合は両方とも既定値に戻す |
+| `skip-seconds` | 数値（秒、0以上） | `10` | 1回のスキップ秒数。等倍より遅いときは「この秒数 × 再生速度」になる |
+| `swipe-step-px` | 数値（px、1以上） | `32` | 縦スワイプで速度が1段階変わる移動量 |
+| `rates` | 数値のリスト | `0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2` | 選べる速度の段階。カンマまたは空白で区切る。昇順に並べ替え、重複は除く |
+| `autohide-ms` | 数値（ms、0以上） | `3000` | 再生中、操作がないときに操作パネルを隠すまでの時間。`0` で自動で隠さない |
+| `fullscreen` | 真偽値 | なし | 全画面表示中に自動で付く（読み取り専用。スタイル調整用） |
+
+### メソッド
+
+メソッドとプロパティは、要素がページに追加されてから使える（追加した直後ではなく、次のマイクロタスク以降。たとえば `customElements.whenDefined` や `await Promise.resolve()` の後）。
+
+| メソッド | 戻り値 | 説明 |
+| --- | --- | --- |
+| `loadFile(file: File)` | `Promise<void>` | 端末内の動画ファイルを読み込む。前の動画の参照は解放する。総時間を読み込んだら解決し、読み込みに失敗したとき、または別の動画の読み込みで中断されたとき（`AbortError`）は拒否する |
+| `play()` | `void` | 再生する。動画が未読み込みなら何もしない。再生できなかったときは `svp-error`（`code: 'play'`）を発生させる |
+| `pause()` | `void` | 停止する |
+| `togglePlay()` | `void` | 再生と停止を切り替える |
+| `skip(direction: -1 \| 1)` | `number` | `-1` で巻き戻し、`1` で送り。速度に応じた秒数だけ動かし、実際に動いた秒数を返す（先頭・末尾で止まった分は含めない）。総時間の読み込み前は何もせず `0` を返す |
+
+### プロパティ
+
+| プロパティ | 型 | 読み書き | 説明 |
+| --- | --- | --- | --- |
+| `rate` | `number` | 読み書き | 再生速度。段階にない値は一番近い段階に合わせる。0以下・数値以外は無視する。変更すると画面中央に倍率を表示する |
+| `currentTime` | `number` | 読み書き | 再生位置（秒）。0〜総時間の範囲に収める。総時間の読み込み前に書き込んでも無視する |
+| `duration` | `number` | 読み取り専用 | 総時間（秒）。読み込み前は `NaN` |
+| `paused` | `boolean` | 読み取り専用 | 停止中かどうか |
+| `videoElement` | `HTMLVideoElement` | 読み取り専用 | 内部の `<video>` 要素（高度な用途向け） |
+
+### カスタムイベント
+
+すべて `CustomEvent` で、親要素へ伝わり（`bubbles`）、Shadow DOM の外でも受け取れる（`composed`）。内容は `event.detail` に入る。
+
+| イベント | `detail` | 発生するとき |
+| --- | --- | --- |
+| `svp-load` | `{ name: string, duration: number }` | 動画の総時間を読み込んだ。`name` はファイル名（`src` の場合はURLの末尾） |
+| `svp-skip` | `{ direction: -1 \| 1, seconds: number, rate: number, total: number }` | スキップした。`seconds` は今回実際に動いた秒数、`rate` はその時の速度、`total` は連続タップ中の合計秒数（`skip()` から呼んだ場合は `seconds` と同じ） |
+| `svp-ratechange` | `{ rate: number, source: 'swipe' \| 'menu' \| 'api' }` | 速度が変わった。`source` は縦スワイプ・速度一覧・`rate` プロパティのどれで変えたか。同じ速度を設定したときは発生しない |
+| `svp-playstate` | `{ paused: boolean }` | 再生・停止が切り替わった |
+| `svp-error` | `{ code: string, message: string }` | 読み込みや再生に失敗した。`message` は画面にも表示する日本語の文言 |
+
+`svp-error` の `code`：
+
+| `code` | 意味 |
+| --- | --- |
+| `unsupported` | 非対応の形式（MKV など） |
+| `decode` | デコードできなかった（ファイルの破損など） |
+| `network` | 読み込み中のエラー |
+| `aborted` | 読み込みが中断された |
+| `play` | 再生を開始できなかった（ブラウザの自動再生の制限など） |
+| `unknown` | その他 |
+
+### 使用例
+
+```js
+const player = document.querySelector('sports-video-player');
+
+player.addEventListener('svp-skip', (e) => {
+  console.log(`${e.detail.total}秒スキップ（${e.detail.rate}倍）`);
+});
+player.addEventListener('svp-error', (e) => alert(e.detail.message));
+
+await customElements.whenDefined('sports-video-player');
+await Promise.resolve(); // 要素の準備を待つ
+player.rate = 0.5;
+await player.loadFile(file); // file は <input type="file"> などで得た File
+player.play();
 ```
-src/
-  index.ts                     エントリ（カスタム要素の登録）
-  SportsVideoPlayer.svelte     本体。4層を重ね、属性・公開メソッド・イベントをつなぐ
-  components/
-    GestureLayer.svelte        ジェスチャー層（pointer-tracker → tap-classifier）
-    Controls.svelte            操作パネル（上部バー・再生ボタン・下部バー）
-    SeekBar.svelte / SpeedMenu.svelte / EmptyState.svelte
-    SkipRipple.svelte / RateOverlay.svelte   反応表示
-    HelpOverlay.svelte         操作方法（下部バーの「？」で開く）
-    Icon.svelte / icons.ts     SVGアイコン
-  lib/                         画面に依存しないロジック
-    playback-math.ts           スキップ秒数・速度段階の計算（純粋関数）
-    pointer-tracker.ts         指の動きの分類
-    tap-classifier.ts          シングル／ダブル／連続タップの分類
-    player-controller.svelte.ts  動画の状態と操作（読み込み・再生・スキップ・速度）
-    autohide.svelte.ts         操作パネルの自動非表示
-    fullscreen.svelte.ts       全画面／疑似全画面
-    element-api.ts             rate・currentTime などのプロパティを要素に追加
-    events.ts                  公開イベントの型とエラー文言
-```
+
 
 ## 開発
 
@@ -58,4 +116,3 @@ npm run typecheck  # svelte-check
 npm run build    # dist/sports-video-player.js（ESM）と dist/sports-video-player.iife.js
 ```
 
-デモページは `?src=/testdata/xxx.MOV` で開発サーバー上の動画を直接読み込める（`testdata/` は git 管理外）。

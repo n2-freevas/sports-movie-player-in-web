@@ -344,6 +344,8 @@
     onstreakend={() => (streakTotal = 0)}
     onswipestart={() => {
       swipeStartIndex = player.rateIndex;
+      // 縦スワイプと認識したら、倍率表示の邪魔にならないよう操作パネルをすぐ隠す
+      panel.hide();
       showRate();
     }}
     onswipemove={onSwipeMove}

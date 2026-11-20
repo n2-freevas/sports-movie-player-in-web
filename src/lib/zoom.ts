@@ -40,11 +40,20 @@ export const isZoomed = (z: ZoomState) => z.scale > 1;
  * ホイールならマウスの位置、キーなら画面の中央（0.5, 0.5）を渡す。
  */
 export function zoomAt(z: ZoomState, factor: number, px = 0.5, py = 0.5): ZoomState {
-  // 画面上の点 p に見えている動画上の点 q = c + (p − 0.5) / s を、新しい倍率でも p に置く
-  const qx = z.cx + (px - 0.5) / z.scale;
-  const qy = z.cy + (py - 0.5) / z.scale;
+  return grab(z, { x: px, y: py }, { x: px, y: py }, factor);
+}
+
+/**
+ * 画面上の点 from に見えていた動画上の点を、to に動かしながら倍率を factor 倍する。
+ * 2本指（from・to は2本の中点、factor は指の間隔の比）と、Shift + ドラッグ（factor 1）で使う。
+ * 操作の開始時の状態 z と開始位置 from を渡し続けると、途中の誤差がたまらない
+ */
+export function grab(z: ZoomState, from: { x: number; y: number }, to: { x: number; y: number }, factor = 1): ZoomState {
+  // 画面上の点 p に見えている動画上の点は q = c + (p − 0.5) / s
+  const qx = z.cx + (from.x - 0.5) / z.scale;
+  const qy = z.cy + (from.y - 0.5) / z.scale;
   const s = clamp(z.scale * factor, ZOOM_MIN, ZOOM_MAX);
-  return fit(s, qx - (px - 0.5) / s, qy - (py - 0.5) / s);
+  return fit(s, qx - (to.x - 0.5) / s, qy - (to.y - 0.5) / s);
 }
 
 /** 見えている範囲を動かす。dx, dy は画面の幅・高さに対する割合（右・下が正） */

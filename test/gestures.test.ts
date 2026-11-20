@@ -312,3 +312,58 @@ describe('判定の細部', () => {
     expect(h.state.paused).toBe(false);
   });
 });
+
+describe('2本指', () => {
+  const setup = () => {
+    const log: string[] = [];
+    const h = createHarness();
+    const tracker = new PointerTracker({
+      onPress: (t) => h.classifier.press(t),
+      onTap: (tap) => h.classifier.tap(zoneOf(tap.x / WIDTH, 0.37, 0.63), tap.downTime, tap.upTime),
+      onAbort: () => h.classifier.abort(),
+      onVerticalSwipeStart: () => log.push('swipe'),
+      onMultiStart: (a, b) => log.push(`start ${a.x},${a.y} ${b.x},${b.y}`),
+      onMultiMove: (a, b) => log.push(`move ${a.x},${a.y} ${b.x},${b.y}`),
+      onMultiEnd: () => log.push('end'),
+    });
+    return { h, tracker, log };
+  };
+
+  it('2本目を置くと、1本目の今の位置と合わせて2本指の操作を始める', () => {
+    const { h, tracker, log } = setup();
+    tracker.down(1, 400, 300, performance.now());
+    tracker.move(1, 405, 300, performance.now());
+    expect(tracker.down(2, 600, 300, performance.now())).toBe(true);
+    tracker.move(2, 700, 300, performance.now());
+    tracker.move(1, 300, 310, performance.now());
+    tracker.up(2, 700, 300, performance.now());
+    expect(log).toEqual(['start 405,300 600,300', 'move 405,300 700,300', 'move 300,310 700,300', 'end']);
+    // ピンチはタップにならない
+    h.wait(1000);
+    expect(h.state.paused).toBe(false);
+    expect(h.state.controlsToggles).toBe(0);
+  });
+
+  it('片方を離した後、残った指では速度を変えない。もう1本置けばやり直す', () => {
+    const { tracker, log } = setup();
+    tracker.down(1, 400, 300, performance.now());
+    tracker.down(2, 600, 300, performance.now());
+    tracker.up(1, 400, 300, performance.now());
+    tracker.move(2, 600, 100, performance.now());
+    expect(log).toEqual(['start 400,300 600,300', 'end']);
+    tracker.down(3, 500, 300, performance.now());
+    expect(log.at(-1)).toBe('start 600,100 500,300');
+  });
+
+  it('3本目は無視して、最初の2本で続ける', () => {
+    const { tracker, log } = setup();
+    tracker.down(1, 400, 300, performance.now());
+    tracker.down(2, 600, 300, performance.now());
+    expect(tracker.down(3, 500, 100, performance.now())).toBe(false);
+    tracker.move(3, 500, 50, performance.now());
+    tracker.up(3, 500, 50, performance.now());
+    expect(log).toEqual(['start 400,300 600,300']);
+    tracker.cancel(2, performance.now());
+    expect(log.at(-1)).toBe('end');
+  });
+});

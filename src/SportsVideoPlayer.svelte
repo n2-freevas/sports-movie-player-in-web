@@ -55,6 +55,7 @@
   } from './lib/playback-math';
   import { PlayerController } from './lib/player-controller.svelte';
   import {
+    grab,
     isZoomed,
     pan,
     PAN_KEY_RATIO,
@@ -154,6 +155,8 @@
   /** 動画の拡大。操作パネルなどの UI は拡大しない */
   let zoom = $state<ZoomState>({ ...ZOOM_IDENTITY });
   let zoomFlash = $state(false);
+  /** 指やマウスでつかんで動かしている間の、開始時の拡大の状態（動かしている間はアニメーションを切る） */
+  let grabZoom = $state<ZoomState | null>(null);
   let zoomTimer: ReturnType<typeof setTimeout> | undefined;
 
   let rateOverlayVisible = $state(false);
@@ -304,6 +307,7 @@
   function startLoad(load: () => Promise<void>): Promise<void> {
     gesture?.reset();
     streakTotal = 0;
+    grabZoom = null;
     setZoom({ ...ZOOM_IDENTITY }, false);
     panel.show();
     const p = load();
@@ -493,6 +497,7 @@
     bind:this={player.video}
     part="video"
     style:transform={zoomTransform(zoom)}
+    class:grabbing={grabZoom != null}
     playsinline
     preload="metadata"
     disablepictureinpicture
@@ -530,6 +535,17 @@
     }}
     onswipemove={onSwipeMove}
     onswipeend={() => showRate(RATE_HIDE_AFTER_SWIPE_MS)}
+    zoomed={isZoomed(zoom)}
+    ongrabstart={() => {
+      if (player.source != null) grabZoom = { ...zoom };
+    }}
+    ongrabmove={(from, to, factor) => {
+      if (!grabZoom) return;
+      const next = grab(grabZoom, from, to, factor);
+      // 倍率が変わったときだけ倍率を出す（移動だけなら出さない）
+      setZoom(next, next.scale !== zoom.scale);
+    }}
+    ongrabend={() => (grabZoom = null)}
   />
 
   <!-- 3. 反応表示層（タップは受けない） -->
@@ -689,6 +705,11 @@
     pointer-events: none;
     transform-origin: 50% 50%;
     transition: transform 0.12s ease-out;
+  }
+
+  /* 指やマウスに遅れずついてくるように */
+  video.grabbing {
+    transition: none;
   }
 
   .feedback {

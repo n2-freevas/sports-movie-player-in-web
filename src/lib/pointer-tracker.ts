@@ -1,6 +1,7 @@
 /**
  * 段階1：指の動きの分類（設計書 3.2）。
  * 指を1本置いてから離すまでを「タップ」「縦スワイプ」「横スワイプ」「長押し」に分ける。
+ * 指が2本になったら1本指の操作は破棄し、2本の位置を「2本指」として伝える（ピンチ拡大・パン用）。
  * DOM には依存せず、座標と時刻（event.timeStamp）だけで判定する。
  */
 import { defaultScheduler, type Scheduler } from './scheduler';
@@ -42,15 +43,28 @@ export interface PointerTrackerCallbacks {
   /** deltaY：開始位置からの縦の移動（下向きが正） */
   onVerticalSwipeMove?(deltaY: number): void;
   onVerticalSwipeEnd?(): void;
+  /** 2本指になった。a・b は2本の位置 */
+  onMultiStart?(a: Point, b: Point): void;
+  onMultiMove?(a: Point, b: Point): void;
+  /** 2本のどちらかを離した（キャンセルを含む） */
+  onMultiEnd?(): void;
 }
 
-export type TrackerState = 'idle' | 'pressed' | 'vswipe' | 'hswipe' | 'longpress';
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export type TrackerState = 'idle' | 'pressed' | 'vswipe' | 'hswipe' | 'longpress' | 'multi';
 
 export class PointerTracker {
   state: TrackerState = 'idle';
   private options: PointerTrackerOptions;
   private activeId: number | null = null;
-  private readonly downIds = new Set<number>();
+  /** 置いている指と、その最新の位置 */
+  private readonly downIds = new Map<number, Point>();
+  /** 2本指のときの2本 */
+  private multiIds: [number, number] | null = null;
   private startX = 0;
   private startY = 0;
   private startTime = 0;
@@ -68,11 +82,18 @@ export class PointerTracker {
   /** pointerdown。追跡を始めた場合は true（呼び出し側で setPointerCapture する） */
   down(id: number, x: number, y: number, time: number): boolean {
     const hadPointers = this.downIds.size > 0;
-    this.downIds.add(id);
+    this.downIds.set(id, { x, y });
     if (hadPointers) {
-      // 2本目の指：その操作は破棄して待機へ
+      // 3本目以降は無視（2本指の操作を続ける）
+      if (this.state === 'multi') return false;
+      // 2本目の指：1本指の操作は破棄して、2本指の操作を始める
       this.abort(time);
-      return false;
+      if (this.downIds.size !== 2) return false;
+      const [first] = [...this.downIds.keys()].filter((k) => k !== id);
+      this.state = 'multi';
+      this.multiIds = [first, id];
+      this.callbacks.onMultiStart?.(this.downIds.get(first)!, { x, y });
+      return true;
     }
     this.state = 'pressed';
     this.activeId = id;
@@ -92,6 +113,13 @@ export class PointerTracker {
   }
 
   move(id: number, x: number, y: number, time: number): void {
+    if (!this.downIds.has(id)) return;
+    this.downIds.set(id, { x, y });
+    if (this.state === 'multi') {
+      const [a, b] = this.multiIds!;
+      if (id === a || id === b) this.callbacks.onMultiMove?.(this.downIds.get(a)!, this.downIds.get(b)!);
+      return;
+    }
     if (id !== this.activeId) return;
     const dx = x - this.startX;
     const dy = y - this.startY;
@@ -119,6 +147,7 @@ export class PointerTracker {
 
   up(id: number, _x: number, _y: number, time: number): void {
     this.downIds.delete(id);
+    if (this.endMulti(id)) return;
     if (id !== this.activeId) return;
     const state = this.state;
     this.reset();
@@ -139,6 +168,7 @@ export class PointerTracker {
   /** pointercancel */
   cancel(id: number, time: number): void {
     this.downIds.delete(id);
+    if (this.endMulti(id)) return;
     if (id !== this.activeId) return;
     this.abort(time);
   }
@@ -149,6 +179,18 @@ export class PointerTracker {
     this.reset();
     if (state === 'pressed') this.callbacks.onAbort?.(time);
     if (state === 'vswipe') this.callbacks.onVerticalSwipeEnd?.();
+    if (state === 'multi') this.callbacks.onMultiEnd?.();
+  }
+
+  /**
+   * 2本指の片方を離したら2本指の操作を終える。残った指は、すべて離すまで何もしない
+   * （ピンチの後に残った指で速度が変わらないように）。もう1本置けば2本指の操作をやり直す
+   */
+  private endMulti(id: number): boolean {
+    if (this.state !== 'multi' || !this.multiIds!.includes(id)) return false;
+    this.reset();
+    this.callbacks.onMultiEnd?.();
+    return true;
   }
 
   /** 要素の削除時など：指の記録もすべて消す */
@@ -161,6 +203,7 @@ export class PointerTracker {
     this.clearLongPress();
     this.state = 'idle';
     this.activeId = null;
+    this.multiIds = null;
   }
 
   private clearLongPress(): void {

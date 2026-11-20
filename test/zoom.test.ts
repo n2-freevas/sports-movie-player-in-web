@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pan, wheelZoomFactor, ZOOM_IDENTITY, ZOOM_MAX, zoomAt, zoomTransform } from '../src/lib/zoom';
+import { grab, pan, wheelZoomFactor, ZOOM_IDENTITY, ZOOM_MAX, zoomAt, zoomTransform } from '../src/lib/zoom';
 
 describe('zoom', () => {
   it('中央で拡大すると中央のまま', () => {
@@ -33,5 +33,14 @@ describe('zoom', () => {
   it('transform', () => {
     expect(zoomTransform(ZOOM_IDENTITY)).toBe('none');
     expect(zoomTransform({ scale: 2, cx: 0.75, cy: 0.5 })).toBe('translate(-50%, 0%) scale(2)');
+  });
+  it('つかんで動かす：開始時に中点に見えていた点が、今の中点にくる', () => {
+    const z0 = zoomAt(ZOOM_IDENTITY, 2);
+    // 中央でつかんで右に 0.1 動かす → 見える範囲は左へ
+    expect(grab(z0, { x: 0.5, y: 0.5 }, { x: 0.6, y: 0.5 }).cx).toBeCloseTo(0.45);
+    // ピンチで2倍：開始時の中点の下の点が、今の中点に
+    const z = grab(ZOOM_IDENTITY, { x: 0.4, y: 0.5 }, { x: 0.45, y: 0.5 }, 2);
+    expect(z.scale).toBe(2);
+    expect(z.cx + (0.45 - 0.5) / z.scale).toBeCloseTo(0.4);
   });
 });

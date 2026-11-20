@@ -42,7 +42,7 @@
   import type { PlayerSnapshot } from './lib/element-api';
   import { createEmitter } from './lib/events';
   import { FullscreenController } from './lib/fullscreen.svelte';
-  import { ARROW_SKIP_SCALE, FRAME_SECONDS, keyAction } from './lib/keyboard';
+  import { ARROW_SKIP_SCALE, FRAME_SECONDS, keyAction, type KeyAction } from './lib/keyboard';
   import {
     DEFAULT_RATES,
     formatRate,
@@ -54,6 +54,18 @@
     type Zone,
   } from './lib/playback-math';
   import { PlayerController } from './lib/player-controller.svelte';
+  import {
+    grab,
+    isZoomed,
+    pan,
+    PAN_KEY_RATIO,
+    wheelZoomFactor,
+    ZOOM_IDENTITY,
+    ZOOM_KEY_FACTOR,
+    zoomAt,
+    zoomTransform,
+    type ZoomState,
+  } from './lib/zoom';
 
   interface Props {
     filePicker?: boolean;
@@ -140,6 +152,13 @@
   /** 最後にクリック・タップで押したボタン（Tab キーで移動したら null） */
   let pointerButton: Element | null = null;
 
+  /** 動画の拡大。操作パネルなどの UI は拡大しない */
+  let zoom = $state<ZoomState>({ ...ZOOM_IDENTITY });
+  let zoomFlash = $state(false);
+  /** 指やマウスでつかんで動かしている間の、開始時の拡大の状態（動かしている間はアニメーションを切る） */
+  let grabZoom = $state<ZoomState | null>(null);
+  let zoomTimer: ReturnType<typeof setTimeout> | undefined;
+
   let rateOverlayVisible = $state(false);
   let rateTimer: ReturnType<typeof setTimeout> | undefined;
   let swipeStartIndex = 0;
@@ -170,7 +189,10 @@
     hostEl.addEventListener('keydown', onKeydown);
     hostEl.addEventListener('pointerdown', onPointerdown);
     hostEl.addEventListener('focusout', onFocusout);
+    // ブラウザ自体の拡大（Ctrl + ホイール、トラックパッドのピンチ）を止めるため passive にしない
+    hostEl.addEventListener('wheel', onWheel, { passive: false });
     return () => {
+      hostEl.removeEventListener('wheel', onWheel);
       hostEl.removeEventListener('keydown', onKeydown);
       hostEl.removeEventListener('pointerdown', onPointerdown);
       hostEl.removeEventListener('focusout', onFocusout);
@@ -224,6 +246,7 @@
   onDestroy(() => {
     panel.cancel();
     clearTimeout(rateTimer);
+    clearTimeout(zoomTimer);
     clearTimeout(skipTimers.left);
     clearTimeout(skipTimers.right);
     // 要素が削除されたら古い動画の参照を解放する（NFR-06）
@@ -284,6 +307,8 @@
   function startLoad(load: () => Promise<void>): Promise<void> {
     gesture?.reset();
     streakTotal = 0;
+    grabZoom = null;
+    setZoom({ ...ZOOM_IDENTITY }, false);
     panel.show();
     const p = load();
     p.catch(() => {
@@ -344,7 +369,10 @@
     e.preventDefault();
     // 押しっぱなしで再生・停止や操作方法の開閉を繰り返さない
     if (e.repeat && (action.type === 'togglePlay' || action.type === 'help')) return;
+    runKeyAction(action);
+  }
 
+  function runKeyAction(action: KeyAction) {
     switch (action.type) {
       case 'togglePlay':
         if (player.source != null) player.togglePlay();
@@ -366,11 +394,56 @@
         player.setRateIndex(player.rateIndex + action.step, 'keyboard');
         flashRate();
         break;
+      case 'zoom':
+        if (player.source == null) break;
+        if (action.step === 0) setZoom({ ...ZOOM_IDENTITY });
+        else setZoom(zoomAt(zoom, action.step > 0 ? ZOOM_KEY_FACTOR : 1 / ZOOM_KEY_FACTOR));
+        break;
+      case 'pan':
+        // 等倍のときは Shift なしの矢印と同じ
+        if (!isZoomed(zoom)) runKeyAction(action.fallback);
+        else setZoom(pan(zoom, action.dx * PAN_KEY_RATIO, action.dy * PAN_KEY_RATIO));
+        break;
       case 'help':
         if (helpOpen) helpOpen = false;
         else openHelp();
         break;
     }
+  }
+
+  // ── 拡大 ──
+
+  /**
+   * ホイール：Ctrl（トラックパッドのピンチを含む）か Shift を押しながらで、マウスの位置を中心に拡大・縮小。
+   * 拡大中は何も押さずに回す（2本指でなぞる）と見えている範囲を動かす。等倍ならページのスクロールのまま
+   */
+  function onWheel(e: WheelEvent) {
+    if (e.defaultPrevented || player.source == null || helpOpen || menuOpen) return;
+    // 行・ページ単位の量をピクセルに直す
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? hostEl.clientHeight : 1;
+    const rect = hostEl.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    if (e.ctrlKey || e.shiftKey) {
+      e.preventDefault();
+      // Shift + ホイールは横スクロールとして deltaX で届くことがある（macOS など）
+      const delta = (e.deltaY !== 0 ? e.deltaY : e.deltaX) * unit;
+      const px = (e.clientX - rect.left) / rect.width;
+      const py = (e.clientY - rect.top) / rect.height;
+      setZoom(zoomAt(zoom, wheelZoomFactor(delta), px, py));
+    } else if (isZoomed(zoom) && !e.altKey && !e.metaKey) {
+      e.preventDefault();
+      setZoom(pan(zoom, (e.deltaX * unit) / rect.width, (e.deltaY * unit) / rect.height), false);
+    }
+  }
+
+  /** 拡大の状態を変える。flash なら倍率を少しの間出す */
+  function setZoom(next: ZoomState, flash = true) {
+    zoom = next;
+    if (!flash) return;
+    zoomFlash = true;
+    clearTimeout(zoomTimer);
+    zoomTimer = setTimeout(() => (zoomFlash = false), RATE_FLASH_MS);
   }
 
   function onKeySkip(direction: Direction, scale: number) {
@@ -423,6 +496,8 @@
   <video
     bind:this={player.video}
     part="video"
+    style:transform={zoomTransform(zoom)}
+    class:grabbing={grabZoom != null}
     playsinline
     preload="metadata"
     disablepictureinpicture
@@ -460,6 +535,17 @@
     }}
     onswipemove={onSwipeMove}
     onswipeend={() => showRate(RATE_HIDE_AFTER_SWIPE_MS)}
+    zoomed={isZoomed(zoom)}
+    ongrabstart={() => {
+      if (player.source != null) grabZoom = { ...zoom };
+    }}
+    ongrabmove={(from, to, factor) => {
+      if (!grabZoom) return;
+      const next = grab(grabZoom, from, to, factor);
+      // 倍率が変わったときだけ倍率を出す（移動だけなら出さない）
+      setZoom(next, next.scale !== zoom.scale);
+    }}
+    ongrabend={() => (grabZoom = null)}
   />
 
   <!-- 3. 反応表示層（タップは受けない） -->
@@ -475,6 +561,15 @@
     <!-- 速度が1倍以外のとき、操作パネルを隠していても右下に倍率を出し続ける -->
     <div class="rate-badge" class:show={!panel.visible && player.rate !== 1} part="rate-badge">
       {formatRate(player.rate)}
+    </div>
+    <!-- 拡大中は、操作パネルを隠していても上部に倍率を出す。倍率を変えた直後も出す -->
+    <div
+      class="zoom-badge"
+      class:show={zoomFlash || (!panel.visible && isZoomed(zoom))}
+      part="zoom-badge"
+      aria-live="polite"
+    >
+      拡大 {Math.round(zoom.scale * 100)}%
     </div>
     {#if player.errorMessage}
       <div class="message" role="alert">{player.errorMessage}</div>
@@ -608,6 +703,13 @@
     object-fit: contain;
     background: #000;
     pointer-events: none;
+    transform-origin: 50% 50%;
+    transition: transform 0.12s ease-out;
+  }
+
+  /* 指やマウスに遅れずついてくるように */
+  video.grabbing {
+    transition: none;
   }
 
   .feedback {
@@ -631,8 +733,25 @@
     transition: opacity var(--svp-fade) ease;
   }
 
-  .rate-badge.show {
+  .rate-badge.show,
+  .zoom-badge.show {
     opacity: 1;
+  }
+
+  .zoom-badge {
+    position: absolute;
+    top: calc(10px + env(safe-area-inset-top, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity var(--svp-fade) ease;
   }
 
   .message {

@@ -90,14 +90,25 @@
       <dd>{arrowSec}秒戻る・進む</dd>
       <dt><kbd>,</kbd> <kbd>.</kbd></dt>
       <dd>1コマ戻る・進む（停止中）</dd>
-      <dt><kbd>&lt;</kbd> <kbd>&gt;</kbd></dt>
-      <dd>再生速度を下げる・上げる（Shift + <kbd>,</kbd> <kbd>.</kbd>）</dd>
+      <dt><kbd>↓</kbd> <kbd>↑</kbd> <kbd>&lt;</kbd> <kbd>&gt;</kbd></dt>
+      <dd>再生速度を下げる・上げる</dd>
+      <dt><kbd>+</kbd> <kbd>-</kbd> <kbd>Z</kbd></dt>
+      <dd>動画を拡大・縮小・元に戻す（<kbd>=</kbd> <kbd>;</kbd> でも拡大）</dd>
+      <dt>Shift + <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></dt>
+      <dd>拡大中に見る場所を動かす</dd>
       <dt><kbd>Home</kbd> <kbd>End</kbd></dt>
       <dd>先頭・末尾へ</dd>
       <dt><kbd>0</kbd>〜<kbd>9</kbd></dt>
       <dd>動画の 0%〜90% の位置へ</dd>
       <dt><kbd>?</kbd></dt>
       <dd>この画面を開く・閉じる</dd>
+    </dl>
+    <h3>マウス・トラックパッド</h3>
+    <dl class="list">
+      <dt>Ctrl か Shift + ホイール</dt>
+      <dd>マウスの位置を中心に拡大・縮小（トラックパッドはピンチでも）</dd>
+      <dt>拡大中にホイール</dt>
+      <dd>見る場所を動かす</dd>
     </dl>
     <p class="note">等倍より遅いときは、スキップする秒数も短くなります（タップ・キーとも）。キー操作は、プレーヤーをクリックかタップして選択した状態で使えます。</p>
   </div>

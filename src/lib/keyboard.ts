@@ -17,9 +17,39 @@ export type KeyAction =
   | { type: 'seekRatio'; ratio: number }
   | { type: 'frame'; direction: Direction }
   | { type: 'rate'; step: Direction }
+  /** 拡大・縮小。step 0 は等倍に戻す */
+  | { type: 'zoom'; step: Direction | 0 }
+  /**
+   * Shift + 矢印：拡大中は見えている範囲を動かす。
+   * 等倍のときは Shift なしの矢印と同じ（←→ はスキップ、↑↓ は速度）にするので、元の操作も入れておく
+   */
+  | { type: 'pan'; dx: number; dy: number; fallback: KeyAction }
   | { type: 'help' };
 
-export type KeyInput = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'isComposing'>;
+export type KeyInput = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey' | 'isComposing'>;
+
+/** 矢印キー（Shift なし）の操作 */
+function arrowAction(key: string): KeyAction | null {
+  switch (key) {
+    case 'ArrowLeft':
+      return { type: 'skip', direction: -1, scale: ARROW_SKIP_SCALE };
+    case 'ArrowRight':
+      return { type: 'skip', direction: 1, scale: ARROW_SKIP_SCALE };
+    // ↑↓ は速度（YouTube は音量だが、このプレーヤーは音量より速度をよく変えるため）
+    case 'ArrowUp':
+      return { type: 'rate', step: 1 };
+    case 'ArrowDown':
+      return { type: 'rate', step: -1 };
+  }
+  return null;
+}
+
+const PAN: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
 
 /** キーを操作に変換する。ショートカットでなければ null */
 export function keyAction(e: KeyInput): KeyAction | null {
@@ -27,6 +57,12 @@ export function keyAction(e: KeyInput): KeyAction | null {
   if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return null;
 
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  const arrow = arrowAction(key);
+  if (arrow) {
+    if (!e.shiftKey) return arrow;
+    const [dx, dy] = PAN[key];
+    return { type: 'pan', dx, dy, fallback: arrow };
+  }
   switch (key) {
     case ' ':
     case 'k':
@@ -35,10 +71,6 @@ export function keyAction(e: KeyInput): KeyAction | null {
       return { type: 'skip', direction: -1, scale: 1 };
     case 'l':
       return { type: 'skip', direction: 1, scale: 1 };
-    case 'ArrowLeft':
-      return { type: 'skip', direction: -1, scale: ARROW_SKIP_SCALE };
-    case 'ArrowRight':
-      return { type: 'skip', direction: 1, scale: ARROW_SKIP_SCALE };
     case 'Home':
       return { type: 'seekRatio', ratio: 0 };
     case 'End':
@@ -51,6 +83,15 @@ export function keyAction(e: KeyInput): KeyAction | null {
       return { type: 'rate', step: -1 };
     case '>':
       return { type: 'rate', step: 1 };
+    // 「+」は US 配列では Shift + =、JIS 配列では Shift + ; なので、Shift なしの「=」「;」でも拡大する
+    case '+':
+    case '=':
+    case ';':
+      return { type: 'zoom', step: 1 };
+    case '-':
+      return { type: 'zoom', step: -1 };
+    case 'z':
+      return { type: 'zoom', step: 0 };
     case '?':
       return { type: 'help' };
   }

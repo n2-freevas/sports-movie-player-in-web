@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ARROW_SKIP_SCALE, keyAction, type KeyInput } from '../src/lib/keyboard';
 
 const press = (key: string, mods: Partial<KeyInput> = {}) =>
-  keyAction({ key, ctrlKey: false, metaKey: false, altKey: false, isComposing: false, ...mods });
+  keyAction({ key, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, isComposing: false, ...mods });
 
 describe('keyAction（YouTube と同じキー割り当て）', () => {
   it('Space・K で再生・停止', () => {
@@ -27,6 +27,32 @@ describe('keyAction（YouTube と同じキー割り当て）', () => {
     expect(press('<')).toEqual({ type: 'rate', step: -1 });
     expect(press('>')).toEqual({ type: 'rate', step: 1 });
   });
+  it('↑・↓ でも速度を1段階変える', () => {
+    expect(press('ArrowUp')).toEqual({ type: 'rate', step: 1 });
+    expect(press('ArrowDown')).toEqual({ type: 'rate', step: -1 });
+  });
+  it('+ = ; で拡大、- で縮小、Z で等倍', () => {
+    expect(press('+', { shiftKey: true })).toEqual({ type: 'zoom', step: 1 });
+    expect(press('=')).toEqual({ type: 'zoom', step: 1 });
+    expect(press(';')).toEqual({ type: 'zoom', step: 1 });
+    expect(press('-')).toEqual({ type: 'zoom', step: -1 });
+    expect(press('z')).toEqual({ type: 'zoom', step: 0 });
+    expect(press('Z', { shiftKey: true })).toEqual({ type: 'zoom', step: 0 });
+  });
+  it('Shift + 矢印は拡大中の移動。等倍のときに使う元の操作も持つ', () => {
+    expect(press('ArrowLeft', { shiftKey: true })).toEqual({
+      type: 'pan',
+      dx: -1,
+      dy: 0,
+      fallback: { type: 'skip', direction: -1, scale: ARROW_SKIP_SCALE },
+    });
+    expect(press('ArrowDown', { shiftKey: true })).toEqual({
+      type: 'pan',
+      dx: 0,
+      dy: 1,
+      fallback: { type: 'rate', step: -1 },
+    });
+  });
   it('Home・End・0〜9 で位置を指定', () => {
     expect(press('Home')).toEqual({ type: 'seekRatio', ratio: 0 });
     expect(press('End')).toEqual({ type: 'seekRatio', ratio: 1 });
@@ -43,6 +69,6 @@ describe('keyAction（YouTube と同じキー割り当て）', () => {
   it('割り当てのないキーは null', () => {
     expect(press('f')).toBeNull();
     expect(press('Enter')).toBeNull();
-    expect(press('ArrowUp')).toBeNull();
+    expect(press('x')).toBeNull();
   });
 });
